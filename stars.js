@@ -1,64 +1,78 @@
 class StarField {
-  // Configuration constants
   static CONFIG = {
-    DEFAULT_STAR_COUNT: 150,
-    STAR_SIZE_MULTIPLIER: 1.2,
-    STAR_SIZE_BASE: 3,
-    STAR_SIZE_MIN: 1,
-    TWINKLE_SPEED_MIN: 1,
-    TWINKLE_SPEED_MAX: 2,
-    VELOCITY_MULTIPLIER: 0.05,
-    MARGIN_BUFFER: 10,
-    RESPAWN_MARGIN: 5,
+    STAR_COUNT: 150,
+    SIZE_MULTIPLIER: 1.2,
+    BASE_SIZE: 3,
+    MIN_SIZE: 1,
+    TWINKLE_MIN: 1,
+    TWINKLE_MAX: 2,
+    VELOCITY: 0.05,
+    MARGIN: 10,
+    RESPAWN: 5,
     MAX_CONNECTIONS: 2,
-    CONNECTION_DISTANCE_MAX: 200,
-    MOUSE_CONNECTION_DISTANCE: 150,
-    MOUSE_CONNECTIONS_MAX: 3,
-    PHASE_INCREMENT: 0.02
+    CONNECTION_DISTANCE: 200,
+    MOUSE_DISTANCE: 150,
+    MOUSE_MAX: 3,
+    PHASE_STEP: 0.02,
+    SIDES: 4,
+    ANIMATION_DELAY_MAX: 4,
+    ANIMATION_DURATION_MIN: 2,
+    ANIMATION_DURATION_RANGE: 3
   };
 
-  constructor(container, numStars = StarField.CONFIG.DEFAULT_STAR_COUNT) {
+  constructor(container, count) {
     this.container = container;
-    this.numStars = numStars;
+    this.count = count || this.getResponsiveStarCount();
     this.stars = [];
-    this.linesCanvas = null;
+    this.canvas = null;
+    this.ctx = null;
     this.mouseX = 0;
     this.mouseY = 0;
     this.mouseMoved = false;
     this.init();
   }
 
+  getResponsiveStarCount() {
+    const width = window.innerWidth;
+    if (width < 768) return 50;
+    if (width < 1024) return 100;
+    return 150;
+  }
+
   init() {
     this.container.innerHTML = '';
-
-    this.createLinesCanvas();
-
-    for (let i = 0; i < this.numStars; i++) {
-      this.createStar();
-    }
-
+    this.setupCanvas();
+    this.createStars();
+    this.setupEvents();
     this.animate();
   }
 
-  createLinesCanvas() {
-    this.linesCanvas = document.createElement('canvas');
-    this.linesCanvas.className = 'star-lines';
-    this.linesCanvas.width = window.innerWidth;
-    this.linesCanvas.height = window.innerHeight;
-    this.linesCanvas.style.position = 'fixed';
-    this.linesCanvas.style.top = '0';
-    this.linesCanvas.style.left = '0';
-    this.linesCanvas.style.pointerEvents = 'none';
-    this.linesCanvas.style.zIndex = '1';
-
-    this.container.appendChild(this.linesCanvas);
-    this.ctx = this.linesCanvas.getContext('2d');
-
-    window.addEventListener('resize', () => {
-      this.linesCanvas.width = window.innerWidth;
-      this.linesCanvas.height = window.innerHeight;
+  setupCanvas() {
+    this.canvas = document.createElement('canvas');
+    this.canvas.className = 'star-lines';
+    this.resizeCanvas();
+    Object.assign(this.canvas.style, {
+      position: 'fixed',
+      top: '0',
+      left: '0',
+      pointerEvents: 'none',
+      zIndex: '1'
     });
 
+    this.container.appendChild(this.canvas);
+    this.ctx = this.canvas.getContext('2d');
+  }
+
+  resizeCanvas() {
+    this.canvas.width = window.innerWidth;
+    this.canvas.height = window.innerHeight;
+  }
+
+  setupEvents() {
+    window.addEventListener('resize', () => {
+      this.resizeCanvas();
+      this.updateStarCount();
+    });
     window.addEventListener('mousemove', (e) => {
       this.mouseX = e.clientX;
       this.mouseY = e.clientY;
@@ -67,34 +81,48 @@ class StarField {
     });
   }
 
+  updateStarCount() {
+    const newCount = this.getResponsiveStarCount();
+    if (newCount !== this.count) {
+      this.count = newCount;
+      this.stars.forEach(star => star.remove());
+      this.stars = [];
+      this.createStars();
+    }
+  }
+
+  createStars() {
+    for (let i = 0; i < this.count; i++) {
+      this.createStar();
+    }
+  }
+
   createStar() {
     const star = document.createElement('div');
     star.className = 'star';
 
     const config = StarField.CONFIG;
-    const size = (Math.random() * (config.STAR_SIZE_BASE - config.STAR_SIZE_MIN) + config.STAR_SIZE_MIN) * config.STAR_SIZE_MULTIPLIER;
+    const size = (Math.random() * (config.BASE_SIZE - config.MIN_SIZE) + config.MIN_SIZE) * config.SIZE_MULTIPLIER;
     const x = Math.random() * 100;
     const y = Math.random() * 100;
-    const delay = Math.random() * 4;
-    const duration = Math.random() * 3 + 2;
 
-    star.style.width = `${size}px`;
-    star.style.height = `${size}px`;
-    star.style.left = `${x}%`;
-    star.style.top = `${y}%`;
-    star.style.animationDelay = `${delay}s`;
-    star.style.animationDuration = `${duration}s`;
+    Object.assign(star.style, {
+      width: `${size}px`,
+      height: `${size}px`,
+      left: `${x}%`,
+      top: `${y}%`,
+      animationDelay: `${Math.random() * config.ANIMATION_DELAY_MAX}s`,
+      animationDuration: `${Math.random() * config.ANIMATION_DURATION_RANGE + config.ANIMATION_DURATION_MIN}s`
+    });
 
     star.starData = {
-      x: x,
-      y: y,
-      size: size,
-      twinkleSpeed: Math.random() * (config.TWINKLE_SPEED_MAX - config.TWINKLE_SPEED_MIN) + config.TWINKLE_SPEED_MIN,
+      x, y, size,
+      twinkleSpeed: Math.random() * (config.TWINKLE_MAX - config.TWINKLE_MIN) + config.TWINKLE_MIN,
       phase: Math.random() * Math.PI * 2,
       currentX: x,
       currentY: y,
-      velocityX: (Math.random() - 0.5) * config.VELOCITY_MULTIPLIER,
-      velocityY: (Math.random() - 0.5) * config.VELOCITY_MULTIPLIER,
+      velocityX: (Math.random() - 0.5) * config.VELOCITY,
+      velocityY: (Math.random() - 0.5) * config.VELOCITY
     };
 
     this.stars.push(star);
@@ -102,125 +130,131 @@ class StarField {
   }
 
   animate() {
-    const animateFrame = () => {
-      const config = StarField.CONFIG;
-
-      this.stars.forEach((star) => {
-        const data = star.starData;
-        data.phase += config.PHASE_INCREMENT * data.twinkleSpeed;
-
-        data.currentX += data.velocityX;
-        data.currentY += data.velocityY;
-
-        const margin = config.MARGIN_BUFFER;
-        if (data.currentX < -margin || data.currentX > 100 + margin ||
-            data.currentY < -margin || data.currentY > 100 + margin) {
-
-          const side = Math.floor(Math.random() * 4);
-          const respawnMargin = config.RESPAWN_MARGIN;
-
-          switch(side) {
-            case 0:
-              data.currentX = Math.random() * 100;
-              data.currentY = -respawnMargin;
-              break;
-            case 1:
-              data.currentX = 100 + respawnMargin;
-              data.currentY = Math.random() * 100;
-              break;
-            case 2:
-              data.currentX = Math.random() * 100;
-              data.currentY = 100 + respawnMargin;
-              break;
-            case 3:
-              data.currentX = -respawnMargin;
-              data.currentY = Math.random() * 100;
-              break;
-          }
-
-          data.velocityX = (Math.random() - 0.5) * config.VELOCITY_MULTIPLIER;
-          data.velocityY = (Math.random() - 0.5) * config.VELOCITY_MULTIPLIER;
-        }
-
-        const pixelX = ((data.currentX - data.x) / 100) * window.innerWidth;
-        const pixelY = ((data.currentY - data.y) / 100) * window.innerHeight;
-
-        star.style.transform = `translate(${pixelX}px, ${pixelY}px)`;
-      });
-
+    const frame = () => {
+      this.updateStars();
       this.drawLines();
       this.mouseMoved = false;
-
-      requestAnimationFrame(animateFrame);
+      requestAnimationFrame(frame);
     };
+    frame();
+  }
 
-    animateFrame();
+  updateStars() {
+    const config = StarField.CONFIG;
+
+    this.stars.forEach(star => {
+      const data = star.starData;
+      data.phase += config.PHASE_STEP * data.twinkleSpeed;
+
+      data.currentX += data.velocityX;
+      data.currentY += data.velocityY;
+
+      if (this.isOutOfBounds(data)) {
+        this.respawnStar(data);
+      }
+
+      const pixelX = ((data.currentX - data.x) / 100) * window.innerWidth;
+      const pixelY = ((data.currentY - data.y) / 100) * window.innerHeight;
+      star.style.transform = `translate(${pixelX}px, ${pixelY}px)`;
+    });
+  }
+
+  isOutOfBounds(data) {
+    const margin = StarField.CONFIG.MARGIN;
+    return data.currentX < -margin || data.currentX > 100 + margin ||
+           data.currentY < -margin || data.currentY > 100 + margin;
+  }
+
+  respawnStar(data) {
+    const config = StarField.CONFIG;
+    const side = Math.floor(Math.random() * config.SIDES);
+    const margin = config.RESPAWN;
+
+    switch(side) {
+      case 0: data.currentX = Math.random() * 100; data.currentY = -margin; break;
+      case 1: data.currentX = 100 + margin; data.currentY = Math.random() * 100; break;
+      case 2: data.currentX = Math.random() * 100; data.currentY = 100 + margin; break;
+      case 3: data.currentX = -margin; data.currentY = Math.random() * 100; break;
+    }
+
+    data.velocityX = (Math.random() - 0.5) * config.VELOCITY;
+    data.velocityY = (Math.random() - 0.5) * config.VELOCITY;
   }
 
   drawLines() {
     if (!this.ctx) return;
 
     const config = StarField.CONFIG;
-    this.ctx.clearRect(0, 0, this.linesCanvas.width, this.linesCanvas.height);
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-    const starPositions = this.stars.map(star => {
+    const positions = this.getStarPositions();
+    this.drawStarConnections(positions);
+    this.drawMouseConnections(positions);
+  }
+
+  getStarPositions() {
+    return this.stars.map(star => {
       const data = star.starData;
       return {
         x: (data.currentX / 100) * window.innerWidth,
         y: (data.currentY / 100) * window.innerHeight,
-        data: data
+        data
       };
     });
+  }
 
-    // Draw connections between nearby stars
-    starPositions.forEach((pos1, i) => {
+  drawStarConnections(positions) {
+    const config = StarField.CONFIG;
+
+    positions.forEach((pos1, i) => {
       let connections = 0;
-      for (let j = i + 1; j < starPositions.length && connections < config.MAX_CONNECTIONS; j++) {
-        const pos2 = starPositions[j];
-        const dx = pos2.x - pos1.x;
-        const dy = pos2.y - pos1.y;
-        const distance = Math.sqrt(dx * dx + dy * dy);
+      for (let j = i + 1; j < positions.length && connections < config.MAX_CONNECTIONS; j++) {
+        const pos2 = positions[j];
+        const distance = this.getDistance(pos1, pos2);
 
-        if (distance < config.CONNECTION_DISTANCE_MAX) {
-          const opacity = Math.max(0.0, 1 - distance / config.CONNECTION_DISTANCE_MAX);
-
-          this.ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
-          this.ctx.lineWidth = 0.5;
-          this.ctx.beginPath();
-          this.ctx.moveTo(pos1.x, pos1.y);
-          this.ctx.lineTo(pos2.x, pos2.y);
-          this.ctx.stroke();
+        if (distance < config.CONNECTION_DISTANCE) {
+          this.drawLine(pos1, pos2, distance / config.CONNECTION_DISTANCE);
           connections++;
         }
       }
     });
+  }
 
-    // Draw connections from mouse to nearby stars
-    const mouseConnections = starPositions
+  drawMouseConnections(positions) {
+    const config = StarField.CONFIG;
+    const connections = positions
       .map(pos => ({
         pos,
-        distance: Math.sqrt((this.mouseX - pos.x) ** 2 + (this.mouseY - pos.y) ** 2)
+        distance: this.getDistance({x: this.mouseX, y: this.mouseY}, pos)
       }))
-      .filter(item => item.distance < config.MOUSE_CONNECTION_DISTANCE)
+      .filter(item => item.distance < config.MOUSE_DISTANCE)
       .sort((a, b) => a.distance - b.distance)
-      .slice(0, config.MOUSE_CONNECTIONS_MAX);
+      .slice(0, config.MOUSE_MAX);
 
-    mouseConnections.forEach(({ pos, distance }) => {
-      const opacity = Math.max(0.0, 1 - distance / config.MOUSE_CONNECTION_DISTANCE);
-
-      this.ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
-      this.ctx.lineWidth = 0.5;
-      this.ctx.beginPath();
-      this.ctx.moveTo(this.mouseX, this.mouseY);
-      this.ctx.lineTo(pos.x, pos.y);
-      this.ctx.stroke();
+    connections.forEach(({ pos, distance }) => {
+      this.drawLine({x: this.mouseX, y: this.mouseY}, pos, distance / config.MOUSE_DISTANCE);
     });
+  }
+
+  getDistance(pos1, pos2) {
+    const dx = pos2.x - pos1.x;
+    const dy = pos2.y - pos1.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  drawLine(from, to, normalizedDistance) {
+    const opacity = Math.max(0, 1 - normalizedDistance);
+
+    this.ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+    this.ctx.lineWidth = 0.5;
+    this.ctx.beginPath();
+    this.ctx.moveTo(from.x, from.y);
+    this.ctx.lineTo(to.x, to.y);
+    this.ctx.stroke();
   }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  const starContainer = document.querySelector('.stars');
-  if (starContainer) {
-    new StarField(starContainer, 150);
-  }
+  const container = document.querySelector('.stars');
+  if (container) new StarField(container);
 });
