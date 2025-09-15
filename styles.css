@@ -107,6 +107,20 @@ body {
   color: var(--color-white-80);
 }
 
+.project-tags {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.project-tag {
+  padding: 0.3rem 0.8rem;
+  text-decoration: none;
+  border-radius: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--color-white-80);
+}
+
 main {
   position: relative;
   z-index: 2;
@@ -315,6 +329,11 @@ section p {
   margin-top: auto;
   padding-top: 1rem;
   min-height: 2rem;
+}
+
+.project-card .project-tags {
+  margin-top: auto;
+  padding-top: 1rem;
 }
 
 .contact {
