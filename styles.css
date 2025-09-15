@@ -24,13 +24,11 @@ body {
   font-family: var(--font-mono);
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-width: none;
+  scrollbar-color: var(--color-white) var(--color-black);
   -ms-overflow-style: none;
 }
 
-body::-webkit-scrollbar {
-  display: none;
-}
+
 
 .stars {
   position: fixed;
@@ -228,8 +226,6 @@ section p {
   font-style: italic;
 }
 
-
-
 .skills-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -278,8 +274,6 @@ section p {
 .skill-category li:last-child {
   border-bottom: none;
 }
-
-
 
 .projects-grid {
   display: grid;
