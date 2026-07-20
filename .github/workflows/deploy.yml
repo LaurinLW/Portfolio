@@ -1,25 +1,52 @@
-name: Auto Deploy
+name: Build and Deploy
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
+
+env:
+  REGISTRY: laurinwittich.dev:5000
+  IMAGE_NAME: portfolio
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
       - name: Deploy via SSH
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: 22
           script: |
-            cd ~/dev/Portfolio
-            git pull 
-            cd ../server
-            docker compose up --build -d
+            set -e
+            cd ~/dev/server
+            echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login laurinwittich.dev:5000 -u "${{ secrets.REGISTRY_USER }}" --password-stdin
+            export PORTFOLIO_TAG=${{ github.sha }}
+            docker compose pull portfolio
+            docker compose up -d portfolio
